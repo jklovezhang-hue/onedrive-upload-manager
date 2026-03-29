@@ -1,10 +1,10 @@
 name = "onedrive-upload-manager"
 compatibility_date = "2024-03-29"
 
-# 告诉 Cloudflare 你的静态文件在哪个目录
 [assets]
 directory = "./dist"
+# 即使 dist 目录里有这个文件，也禁止上传它
+exclude = ["_redirects"]
 
-# 告诉 Cloudflare 自动执行构建命令
 [build]
 command = "npm run build"
