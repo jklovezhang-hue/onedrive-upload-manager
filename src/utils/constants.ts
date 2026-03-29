@@ -1,19 +1,10 @@
 // MSAL 配置常量
-// 优先使用环境变量（构建时注入），否则使用 window.location.origin（运行时动态）
-const getOrigin = () => {
-  // 生产构建时 VITE_REDIRECT_URI 已注入
-  if (import.meta.env.VITE_REDIRECT_URI) {
-    return import.meta.env.VITE_REDIRECT_URI;
-  }
-  // 开发时或 fallback
-  return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
-};
-
+// 统一使用 window.location.origin（运行时动态获取当前域名）
 export const MSAL_CONFIG = {
   clientId: 'ae6ceb41-6cf4-4bcf-89a2-7ca49b8fb417',
   authority: 'https://login.microsoftonline.com/consumers',
-  redirectUri: getOrigin(),
-  postLogoutRedirectUri: `${getOrigin()}/login`,
+  redirectUri: window.location.origin,
+  postLogoutRedirectUri: `${window.location.origin}/login`,
   scopes: ['User.Read', 'Files.ReadWrite.All', 'offline_access'] as const,
 };
 
