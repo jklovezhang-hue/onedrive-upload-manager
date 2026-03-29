@@ -1,10 +1,8 @@
 name = "onedrive-upload-manager"
 compatibility_date = "2024-03-29"
-compatibility_flags = ["nodejs_compat"]
 
 [assets]
 directory = "./dist"
-binding = "ASSETS"
 not_found_handling = "single-page-application"
 
 [build]
