@@ -1,3 +1,9 @@
 name = "onedrive-upload-manager"
-compatibility_date = "2024-01-01"
-pages_build_output_dir = "dist"
+compatibility_date = "2024-03-29"
+
+[assets]
+directory = "./dist"
+exclude = ["_redirects"]
+
+[build]
+command = "npm run build"
