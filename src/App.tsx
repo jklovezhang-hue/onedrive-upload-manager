@@ -24,10 +24,11 @@ export default function App() {
         authority: 'https://login.microsoftonline.com/consumers',
         redirectUri: window.location.origin,
         postLogoutRedirectUri: `${window.location.origin}/login`,
+        navigateToLoginRequestUrl: false,   // 防止自动跳转
       },
       cache: {
-        cacheLocation: 'sessionStorage',
-        storeAuthStateInCookie: false,
+        cacheLocation: 'localStorage',     // 改为 localStorage，跨标签页更稳定
+        storeAuthStateInCookie: true,       // Cookie 存储对移动端更友好
       },
     };
 
