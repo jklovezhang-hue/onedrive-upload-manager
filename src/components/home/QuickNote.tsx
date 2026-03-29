@@ -84,9 +84,10 @@ export default function QuickNote() {
 
       {isOpen && (
         <div className="border-t border-base-300">
-          <div className="flex h-[420px]">
-            {/* ── 左侧笔记列表 ── */}
-            <div className="w-52 border-r border-base-300 flex flex-col bg-base-200/30">
+          {/* 手机：上下结构 / 桌面：左右结构 */}
+          <div className="flex flex-col lg:flex-row h-[420px] lg:h-[420px]">
+            {/* ── 左侧笔记列表（桌面）/ 顶部（手机）── */}
+            <div className="w-full lg:w-52 border-b lg:border-b-0 lg:border-r border-base-300 flex flex-col bg-base-200/30 order-1">
               {/* 新建按钮 */}
               <div className="p-2 border-b border-base-300">
                 <button
@@ -99,7 +100,7 @@ export default function QuickNote() {
               </div>
 
               {/* 笔记列表 */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto max-h-36 lg:max-h-none">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <span className="loading loading-spinner loading-sm text-primary" />
@@ -165,8 +166,8 @@ export default function QuickNote() {
               </div>
             </div>
 
-            {/* ── 右侧编辑器 ── */}
-            <div className="flex-1 flex flex-col min-w-0">
+            {/* ── 右侧编辑器（桌面）/ 底部（手机）── */}
+            <div className="flex-1 flex flex-col min-w-0 order-2">
               {activeNote ? (
                 <>
                   {/* 编辑器顶部：笔记名 + 保存状态 */}
@@ -207,7 +208,7 @@ export default function QuickNote() {
                   <div className="text-center">
                     <FileText className="w-12 h-12 text-base-content/20 mx-auto mb-3" />
                     <p className="text-base-content/50 text-sm">选择一篇笔记开始编辑</p>
-                    <p className="text-base-content/30 text-xs mt-1">或点击左上角「新建笔记」</p>
+                    <p className="text-base-content/30 text-xs mt-1">或点击上方「新建笔记」</p>
                   </div>
                 </div>
               )}
