@@ -18,12 +18,15 @@ export default function App() {
   const [msalInstance, setMsalInstance] = useState<PublicClientApplication | null>(null);
 
   useEffect(() => {
+    // 优先使用环境变量（构建时注入），否则使用 window.location.origin（运行时动态）
+    const redirectUri = import.meta.env.VITE_REDIRECT_URI || window.location.origin;
+
     const config: Configuration = {
       auth: {
         clientId: 'ae6ceb41-6cf4-4bcf-89a2-7ca49b8fb417',
         authority: 'https://login.microsoftonline.com/consumers',
-        redirectUri: window.location.origin,
-        postLogoutRedirectUri: `${window.location.origin}/login`,
+        redirectUri,
+        postLogoutRedirectUri: `${redirectUri}/login`,
         navigateToLoginRequestUrl: false,   // 防止自动跳转
       },
       cache: {

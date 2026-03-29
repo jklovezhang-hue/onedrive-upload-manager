@@ -1,1 +1,4 @@
 node_modules
+
+# Only ignore .env.local (contains sensitive secrets)
+.env.local

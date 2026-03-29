@@ -1,9 +1,13 @@
 // MSAL 配置常量
-// redirectUri / postLogoutRedirectUri 使用 window.location.origin 实现自动适配：
-//   - 开发时（localhost:5173） → http://localhost:5173
-//   - 局域网手机访问（192.168.x.x:5173） → http://192.168.x.x:5173
-//   - 生产部署后 → 自动使用实际域名
-const getOrigin = () => typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+// 优先使用环境变量（构建时注入），否则使用 window.location.origin（运行时动态）
+const getOrigin = () => {
+  // 生产构建时 VITE_REDIRECT_URI 已注入
+  if (import.meta.env.VITE_REDIRECT_URI) {
+    return import.meta.env.VITE_REDIRECT_URI;
+  }
+  // 开发时或 fallback
+  return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
+};
 
 export const MSAL_CONFIG = {
   clientId: 'ae6ceb41-6cf4-4bcf-89a2-7ca49b8fb417',
