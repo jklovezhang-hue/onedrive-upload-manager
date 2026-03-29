@@ -1,6 +1,6 @@
 # Onedrive Upload Manager — 开发日志
 
-> 版本：v1.1 | 日期：2026-03-29 | 状态：**正常运行**
+> 版本：v1.2 | 日期：2026-03-30 | 状态：**正常运行（已部署至 Cloudflare Pages）**
 
 ---
 
@@ -133,12 +133,15 @@ public/
 ### 4.1 认证与登录
 
 - **登录页**：`/login` 全屏独立页面，Microsoft 账号登录按钮
-- **MSAL 配置**：
+- **MSAL 配置**（详见 9.1）：
   - `clientId: ae6ceb41-6cf4-4bcf-89a2-7ca49b8fb417`
   - `authority: https://login.microsoftonline.com/consumers`（个人 Microsoft 账号）
-  - `redirectUri: http://localhost:5173`
+  - `redirectUri: window.location.origin`（**运行时动态获取当前域名**）
+  - `postLogoutRedirectUri: window.location.origin + '/login'`
   - `scopes: ['User.Read', 'Files.ReadWrite.All', 'offline_access']`
-- **Token 管理**：MSAL 内部 `sessionStorage`，`acquireTokenSilent` 自动刷新，失败则弹窗重新授权
+  - `cacheLocation: 'localStorage'`（跨标签页持久化）
+  - `storeAuthStateInCookie: true`（移动端兼容性）
+- **Token 管理**：MSAL 内部 `localStorage`（改自 sessionStorage），`acquireTokenSilent` 自动刷新，失败则重新登录
 - **登出**：顶部栏登出按钮，清除 sessionStorage，跳转登录页
 
 ### 4.2 主页 — 文件夹网格
@@ -241,10 +244,10 @@ const mdFiles = (response.value ?? []).filter(
 | 操作 | 方法 |
 |---|---|
 | 初始化 | `new PublicClientApplication(msalConfig)` |
-| 登录 | `msalInstance.loginPopup({ scopes })` |
+| 登录 | `msalInstance.loginRedirect({ scopes })`（页面跳转，移动端兼容）|
 | 静默获取 Token | `msalInstance.acquireTokenSilent({ scopes, account })` |
 | 交互式获取 Token | `msalInstance.acquireTokenPopup({ scopes })` |
-| 登出 | `msalInstance.logoutPopup()` |
+| 登出 | `msalInstance.logoutRedirect()` |
 
 ### 6.2 Graph API（封装在 graphService.ts）
 
@@ -380,7 +383,8 @@ npm run preview
 |---|---|
 | Platform | Single-page application (SPA) |
 | Redirect URI | `http://localhost:5173`（开发用）|
-| Redirect URI | `http://192.168.1.214:5173`（局域网手机访问用）|
+| Redirect URI | `https://onedrive-upload-manager.jklove-zhang.workers.dev`（Cloudflare Pages 生产环境）|
+| Redirect URI | `https://onedrive-upload-manager.jklove-zhang.workers.dev/auth/callback`（MSAL 回调）|
 | Implicit grant | ✅ **ID tokens**（必须） |
 
 > 注意：MSAL 3.x 使用 PKCE 流程，不再需要 Access tokens 的隐式授权，但 ID tokens 仍然需要。
@@ -399,11 +403,11 @@ npm run preview
 
 | 错误代码 | 原因 | 解决方法 |
 |---|---|---|
-| `AADSTS50011` | Redirect URI 不匹配 | 确认 Azure Portal 中 redirectUri 为 `http://localhost:5173` |
+| `AADSTS50011` | Redirect URI 不匹配 | 确认 Azure Portal 中 redirectUri 包含当前访问地址 |
 | `AADSTS70002` | Client ID 不匹配 | 确认 `clientId` 为 `ae6ceb41-6cf4-4bcf-89a2-7ca49b8fb417` |
-| `AADSTS90006` | 缺少 offline_access scope | 确认已添加 `offline_access` 权限 |
 | `AADSTS50053` | 账户被锁定 | 登录 [account.live.com](https://account.live.com) 解锁账户 |
 | `AADSTS50055` | 密码已过期 | 在 account.live.com 重置密码 |
+| `AADSTS90006` | 缺少 offline_access scope | 确认已添加 `offline_access` 权限 |
 
 ---
 
@@ -443,21 +447,32 @@ npm run preview
 
 ### 11.2 方案 A：Cloudflare Pages（推荐）
 
-**步骤：**
+**当前部署配置：**
+
+- **项目名称**：`onedrive-upload-manager`
+- **部署地址**：`https://onedrive-upload-manager.jklove-zhang.workers.dev`
+- **构建方式**：Git 集成（推荐）或 Direct upload）
+
+**使用 Git 集成部署（推荐）：**
 
 1. 注册 [Cloudflare](https://dash.cloudflare.com/)（免费）
-2. 点击「Workers & Pages」→ 「Create application」→ 「Pages」→ 「Connect to Git」或「Direct upload」
-3. 直接上传构建产物：
-   ```bash
-   # 先构建
-   npm run build
+2. 点击「Workers & Pages」→ 「Create application」→ 「Connect to Git」
+3. 选择你的 GitHub 仓库
+4. 设置：
+   - **Production branch**: `main`
+   - **Build command**: `npm ci && npm run build`
+   - **Build output directory**: `dist`
+5. 点击「Save and Deploy」
 
-   # 进入 dist 目录，用 Wrangler 上传
-   npx wrangler pages deploy dist/ --project-name=onedrive-upload-manager
-   ```
-4. 获得一个 `.pages.dev` 域名，例如 `onedrive-upload-manager.pages.dev`
-5. 在 Azure Portal 添加 redirectUri：`https://onedrive-upload-manager.pages.dev`（见 9.1）
-6. 手机用 Chrome 打开该 URL，点击「添加到主屏幕」
+**使用 Direct upload 部署：**
+
+```bash
+# 先构建
+npm run build
+
+# 用 Wrangler 上传（需要 CLOUDFLARE_API_TOKEN 环境变量）
+npx wrangler pages deploy dist/ --project-name=onedrive-upload-manager
+```
 
 ### 11.3 方案 B：Vercel
 
@@ -485,14 +500,13 @@ npx netlify deploy --prod --dir=dist
 
 1. [Azure Portal](https://portal.azure.com) → **App registrations** → 选择应用
 2. **Authentication** → **Add URI** → 添加实际 URL，例如：
-   - `https://onedrive-upload-manager.pages.dev`
-   - `https://onedrive-upload-manager.vercel.app`
+   - `https://onedrive-upload-manager.jklove-zhang.workers.dev`（必须）
+   - `https://onedrive-upload-manager.jklove-zhang.workers.dev/auth/callback`（MSAL 回调）
 3. 重新点击「**Grant admin consent**」（即使之前已授权，新 URI 也需要）
-4. **重要**：修改 `src/services/authService.ts` 中的 `redirectUri` 为实际 URL（开发环境保持 `http://localhost:5173`）
 
 ### 11.6 手机端使用流程
 
-1. 用 Chrome 打开部署后的 URL，例如 `https://onedrive-upload-manager.pages.dev`
+1. 用 Chrome 打开部署后的 URL：`https://onedrive-upload-manager.jklove-zhang.workers.dev`
 2. 点击「使用 Microsoft 账户登录」→ 在 Microsoft 弹窗中授权
 3. 登录成功后即可正常使用所有功能
 4. **安装为 PWA**：Chrome 菜单（三点）→ 「添加到主屏幕」
@@ -515,7 +529,142 @@ npx netlify deploy --prod --dir=dist
 
 ---
 
+## 12. 手机部署问题排查与解决方案（重要经验）
+
+### 12.1 问题：手机登录跳转到 localhost
+
+**现象**：手机访问 `https://onedrive-upload-manager.jklove-zhang.workers.dev/` 后，点击登录按钮跳转到 `http://localhost:5173`，显示"无法访问此网站"。
+
+**根本原因**：MSAL 的 `redirectUri` 在构建时被硬编码为 `http://localhost:5173`。
+
+**解决方案**：所有 redirectUri 必须使用 `window.location.origin` 动态获取当前域名。
+
+```typescript
+// ❌ 错误：硬编码 localhost
+redirectUri: 'http://localhost:5173'
+redirectUri: import.meta.env.VITE_REDIRECT_URI  // 环境变量在构建时注入，生产环境可能缺失
+
+// ✅ 正确：运行时动态获取
+redirectUri: window.location.origin
+postLogoutRedirectUri: `${window.location.origin}/login`
+```
+
+### 12.2 问题：Vite 环境变量在 Cloudflare 构建时未注入
+
+**现象**：设置了 `.env.production` 文件，但构建产物中仍然包含 localhost。
+
+**原因**：Vite 的 `import.meta.env.VITE_*` 变量在**构建时**被替换。如果 Cloudflare 构建环境没有该环境变量，就会使用 fallback 值。
+
+**解决方案**：
+1. 不依赖环境变量，直接使用 `window.location.origin`
+2. 删除 `.env` 和 `.env.production` 文件
+3. 确保代码中没有任何 `localhost:5173` 字符串
+
+### 12.3 问题：wrangler.toml 配置模式混淆
+
+**现象**：Cloudflare 提示"无法修改 Worker 的环境变量"（Variables cannot be added to a Worker that only has static assets）。
+
+**原因**：项目混合了 Workers 和 Pages 模式：
+- Workers 模式使用 `[assets]` 配置
+- Pages 模式使用 `pages_build_output_dir` 配置
+
+**解决方案**：根据部署方式选择正确的配置：
+
+```toml
+# Pages 模式（推荐，用于纯静态网站）
+name = "onedrive-upload-manager"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "dist"
+
+# Workers 模式（用于有后端逻辑的项目）
+name = "onedrive-upload-manager"
+compatibility_date = "2024-01-01"
+
+[assets]
+directory = "./dist"
+exclude = ["_redirects"]
+
+[build]
+command = "npm run build"
+```
+
+### 12.4 问题：wrangler deploy 失败 "Must specify a project name"
+
+**现象**：`npx wrangler pages deploy dist/` 报错 "Must specify a project name"。
+
+**原因**：CI 环境无法交互式输入项目名称。
+
+**解决方案**：在构建命令中添加 `--project-name` 参数：
+
+```bash
+npm ci && npm run build && npx wrangler pages deploy dist/ --project-name onedrive-upload-manager
+```
+
+### 12.5 问题：wrangler Authentication error [code: 10000]
+
+**现象**：wrangler 部署时报认证错误。
+
+**原因**：Cloudflare API Token 权限不足。
+
+**解决方案**：
+1. 去 https://dash.cloudflare.com/profile/api-tokens
+2. 创建新 Token，添加 **Account: Cloudflare Pages: Edit** 权限
+3. 将新 Token 更新到 Cloudflare Pages 项目的 `CLOUDFLARE_API_TOKEN` 环境变量
+
+### 12.6 最佳实践总结
+
+1. **redirectUri 必须动态化**：始终使用 `window.location.origin`，不要硬编码或依赖环境变量
+2. **删除所有 localhost 引用**：构建前全局搜索 `localhost:5173`，确保零残留
+3. **使用 Git 集成部署**：Cloudflare Pages 的 Git 集成最稳定，自动处理构建和部署
+4. **保持配置简单**：使用 Pages 模式的 `pages_build_output_dir`，避免复杂的 wrangler 配置
+5. **验证构建产物**：部署前检查 `dist/assets/*.js` 中是否包含 localhost
+
+---
+
 ## 更新日志
+
+### v1.2（2026-03-30）
+
+**问题修复：**
+
+- **手机登录跳转到 localhost**：移除所有 `VITE_REDIRECT_URI` 环境变量依赖，`redirectUri` 和 `postLogoutRedirectUri` 统一使用 `window.location.origin`
+- **删除 `.env` 文件**：该文件包含硬编码的 `localhost:5173`，已被删除
+- **删除 `dist/` 从 git 追踪**：Cloudflare 从源码构建，不需要追踪构建产物
+- **添加 `dist/` 到 `.gitignore`**：避免误提交构建产物
+
+**代码变更：**
+
+```typescript
+// App.tsx - 修改前
+const redirectUri = import.meta.env.VITE_REDIRECT_URI || window.location.origin;
+const config: Configuration = {
+  auth: {
+    redirectUri,
+    postLogoutRedirectUri: `${redirectUri}/login`,
+  },
+  cache: {
+    cacheLocation: 'sessionStorage',
+    storeAuthStateInCookie: false,
+  },
+};
+
+// App.tsx - 修改后
+const config: Configuration = {
+  auth: {
+    redirectUri: window.location.origin,
+    postLogoutRedirectUri: `${window.location.origin}/login`,
+  },
+  cache: {
+    cacheLocation: 'localStorage',
+    storeAuthStateInCookie: true,
+  },
+};
+```
+
+**部署成功：**
+
+- Cloudflare Pages 部署地址：`https://onedrive-upload-manager.jklove-zhang.workers.dev`
+- 手机端可正常登录和使用
 
 ### v1.1（2026-03-29）
 
