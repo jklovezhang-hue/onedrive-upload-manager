@@ -105,11 +105,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!msalInstance) return;
     set({ isLoading: true });
     try {
-      const response = await msalInstance.loginPopup({ scopes: [...SCOPES] });
-      const graphClient = buildGraphClient(response.accessToken);
-      set({ account: response.account, accessToken: response.accessToken, graphClient, isLoading: false });
+      // 使用 loginRedirect 替代 loginPopup（手机浏览器兼容性更好，不会被弹窗拦截）
+      await msalInstance.loginRedirect({ scopes: [...SCOPES] });
+      // loginRedirect 会触发页面跳转，这里不会执行到
     } catch (error) {
-      console.error('[MSAL] login failed:', error);
+      console.error('[MSAL] login redirect failed:', error);
       set({ isLoading: false });
       throw error;
     }
@@ -119,10 +119,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { msalInstance } = get();
     if (!msalInstance) return;
     try {
-      await msalInstance.logoutPopup();
-      get().clearAuth();
+      await msalInstance.logoutRedirect();
+      // logoutRedirect 触发页面跳转，AuthCallback 会处理清理
     } catch (error) {
-      console.error('[MSAL] logout failed:', error);
+      console.error('[MSAL] logout redirect failed:', error);
     }
   },
 

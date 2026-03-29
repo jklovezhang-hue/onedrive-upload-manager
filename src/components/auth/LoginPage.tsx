@@ -23,9 +23,8 @@ export default function LoginPage() {
     setIsLoggingIn(true);
     try {
       await login();
-      addToast({ type: 'success', message: '登录成功！' });
-      navigate('/', { replace: true });
-    } catch (error) {
+      // loginRedirect 触发页面跳转，这里不会执行到
+    } catch {
       addToast({ type: 'error', message: '登录失败，请重试。' });
       setIsLoggingIn(false);
     }
@@ -57,7 +56,7 @@ export default function LoginPage() {
             {isLoggingIn || isLoading ? (
               <>
                 <span className="loading loading-spinner loading-sm" />
-                正在跳转...
+                正在跳转到 Microsoft 登录页...
               </>
             ) : (
               <>
